@@ -1,3 +1,21 @@
+# `Notes`
+
+Install and Set default toolchain:
+
+``` console
+rustc --version
+rustup toolchain install nightly-2018-09-13
+rustup default nightly-2018-09-13
+```
+
+With nightly use:
+
+``` console
+cargo +nightly build --example hello --target thumbv7em-none-eabi -Z build-std=alloc,core
+```
+
+
+
 # `cortex-m-quickstart`
 
 > A template for building applications for ARM Cortex-M microcontrollers

@@ -1,17 +1,34 @@
 //! Prints "Hello, world!" on the host console using semihosting
 
+#![feature(alloc_error_handler)]
 #![no_main]
 #![no_std]
 
 use core::cell::UnsafeCell;
 use panic_halt as _;
 
-use cortex_m_rt::entry;
-use cortex_m_semihosting::{dbg, hprintln};
+use cortex_m_rt::exception;
+
+use cortex_m_rt::{entry, ExceptionFrame};
+use cortex_m_semihosting::{dbg, hio, hprintln};
 use pqc_kyber::*;
 use rand_core::{RngCore, CryptoRng, Error,impls};
 use core::mem::size_of_val;
 use core::sync::atomic::{AtomicPtr, Ordering};
+
+use self::alloc::vec;
+use core::alloc::Layout;
+
+use alloc_cortex_m::CortexMHeap;
+use cortex_m::asm;
+
+extern crate alloc;
+
+// this is the allocator the application will use
+#[global_allocator]
+static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
+
+const HEAP_SIZE: usize = 15000; // in bytes
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CustomRng(u64);
@@ -37,40 +54,33 @@ impl RngCore for CustomRng {
 
 impl CryptoRng for CustomRng {
 }
-//
-// enum DivisionResult {
-//     U(Uake),
-//     DividedByZero,
-// }
-//
-// static BOB: AtomicPtr<Option<Uake>> = AtomicPtr::new(None);
-// static ALICE: AtomicPtr<Option<Uake>> = AtomicPtr::new(None);
 
-// pub fn set_bob_value(val: *mut Uake) {
-//     BOB.store(val, Ordering::Relaxed)
-// }
-//
-// pub fn get_bob_value() -> *mut Uake {
-//     BOB.load(Ordering::Relaxed)
-// }
-//
-// pub fn set_alice_value(val: *mut Uake) {
-//     BOB.store(val, Ordering::Relaxed)
-// }
-//
-// pub fn get_alice_value() -> *mut Uake {
-//     BOB.load(Ordering::Relaxed)
-// }
+fn client_init(alice: &mut Uake, public_keys: PublicKey, rng: &mut CustomRng){
+    hprintln!("{:?}", size_of_val(&alice)); //4
+    let client_init = alice.client_init(&public_keys, rng);
+    hprintln!("{:?}", size_of_val(&client_init));
+}
+
+fn uake(bob_keys: Keypair, rng: &mut CustomRng){
+    hprintln!("CIAONE");
+    hprintln!("{:?}", size_of_val(&bob_keys)); //3584
+    // let mut xs = vec![Uake::new(), Uake::new()];
+    let mut alice = Uake::new();
+
+    client_init(&mut alice, bob_keys.public, rng);
+}
+
 
 #[entry]
 unsafe fn main() -> ! {
-    let mut rng = CustomRng(2 as u64);
+    unsafe { ALLOCATOR.init(cortex_m_rt::heap_start() as usize, HEAP_SIZE) }
 
-    let bob_keys = keypair(&mut rng);
+    let mut rng = CustomRng(2 as u64);
 
     // println!("{}", get_value());
     // set_value(&mut keypair(&mut rng));
     // hprintln!("{:?}", (*get_value()).public).unwrap();
+    // hprintln!("{:?}", size_of_val(&bob_keys)).unwrap();
 
     // hprintln!("{:?}", BOB_KEYS.public).unwrap();
     // dbg!(size_of_val(&BOB_KEYS));
@@ -79,15 +89,35 @@ unsafe fn main() -> ! {
 
     // let mut alice = Uake::new();
     // let mut bob = Uake::new();
-    // hprintln!("{:?}", size_of_val(&alice)).unwrap();
-    //
-    // let client_init = (*get_alice_value()).client_init(&bob_keys.public, &mut rng);
+    // Growable array allocated on the heap
+
+    let bob_keys = vec![keypair(&mut rng)];
+
+    uake(bob_keys[0], &mut rng);
+
     // let server_response = (*get_bob_value()).server_receive(
     //     client_init, &bob_keys.secret, &mut rng
     // );
     // alice.client_confirm(server_response.unwrap()).expect("TODO: panic message");
     //
     // assert_eq!(alice.shared_secret, bob.shared_secret);
+
+    loop {}
+}
+
+#[exception]
+unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
+    if let Ok(mut hstdout) = hio::hstdout() {
+        // writeln!(hstdout, "{:#?}", ef).ok();
+        hprintln!("{:?}", ef);
+    }
+
+    loop {}
+}
+
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    asm::bkpt();
 
     loop {}
 }
