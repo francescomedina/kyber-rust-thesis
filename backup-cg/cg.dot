@@ -1,0 +1,154 @@
+digraph {
+    node [fontname=monospace shape=box]
+    0 [label="Reset\nmax >= 28864\nlocal = ?"]
+    1 [label="pqc_kyber::kem::crypto_kem_keypair\nmax = 9624\nlocal = 8320"]
+    2 [label="main\nmax = 28864\nlocal = 8"]
+    3 [label="hello::__cortex_m_rt_main\nmax = 28856\nlocal = 13352"]
+    4 [label="core::panicking::panic_fmt\nmax = 8\nlocal = 8"]
+    5 [label="core::panicking::panic_bounds_check\nmax = 16\nlocal = 8"]
+    6 [label="core::slice::index::slice_start_index_len_fail\nmax = 24\nlocal = 8"]
+    7 [label="core::slice::index::slice_start_index_len_fail_rt\nmax = 16\nlocal = 8"]
+    8 [label="core::result::unwrap_failed\nmax = 16\nlocal = 8"]
+    9 [label="core::slice::<impl [T]>::copy_from_slice::len_mismatch_fail\nmax = 16\nlocal = 8"]
+    10 [label="DefaultHandler_\nmax = 0\nlocal = 0"]
+    11 [label="DefaultPreInit\nmax = 0\nlocal = 0"]
+    12 [label="rust_begin_unwind\nmax = 0\nlocal = 0"]
+    13 [label="pqc_kyber::reference::polyvec::polyvec_tobytes\nmax = 576\nlocal = 544"]
+    14 [label="pqc_kyber::reference::indcpa::gen_matrix\nmax = 1304\nlocal = 824"]
+    15 [label="pqc_kyber::reference::fips202::keccak_squeezeblocks\nmax = 480\nlocal = 48"]
+    16 [label="pqc_kyber::reference::fips202::keccakf1600_statepermute\nmax = 432\nlocal = 416"]
+    17 [label="pqc_kyber::reference::indcpa::indcpa_enc\nmax = 10088\nlocal = 8784"]
+    18 [label="pqc_kyber::reference::polyvec::polyvec_frombytes\nmax = 32\nlocal = 16"]
+    19 [label="pqc_kyber::reference::poly::poly_getnoise_eta1\nmax = 1024\nlocal = 272"]
+    20 [label="pqc_kyber::reference::poly::poly_getnoise_eta2\nmax = 976\nlocal = 224"]
+    21 [label="pqc_kyber::reference::polyvec::polyvec_ntt\nmax = 72\nlocal = 56"]
+    22 [label="pqc_kyber::reference::polyvec::polyvec_basemul_acc_montgomery\nmax = 648\nlocal = 600"]
+    23 [label="pqc_kyber::reference::poly::poly_invntt_tomont\nmax = 72\nlocal = 56"]
+    24 [label="pqc_kyber::reference::ntt::basemul\nmax = 48\nlocal = 32"]
+    25 [label="pqc_kyber::reference::fips202::shake256\nmax = 752\nlocal = 264"]
+    26 [label="pqc_kyber::reference::fips202::keccak_absorb_once\nmax = 488\nlocal = 56"]
+    27 [label="pqc_kyber::reference::poly::poly_frommont\nmax = 32\nlocal = 32"]
+    28 [label="pqc_kyber::kem::crypto_kem_dec\nmax = 15504\nlocal = 5416"]
+    29 [label="pqc_kyber::symmetric::hash_g\nmax = 720\nlocal = 232"]
+    30 [label="pqc_kyber::symmetric::hash_h\nmax = 728\nlocal = 240"]
+    31 [label="compiler_builtins::mem::memcpy\nmax = 32\nlocal = 32"]
+    32 [label="compiler_builtins::mem::memset\nmax = 8\nlocal = 8"]
+    33 [label="compiler_builtins::arm::__aeabi_memcpy\nmax = 32\nlocal = 0"]
+    34 [label="__aeabi_memcpy\nmax = 32\nlocal = 0"]
+    35 [label="compiler_builtins::arm::__aeabi_memcpy4\nmax = 48\nlocal = 16"]
+    36 [label="compiler_builtins::arm::__aeabi_memcpy8\nmax = 48\nlocal = 0"]
+    37 [label="compiler_builtins::arm::__aeabi_memset\nmax = 8\nlocal = 0"]
+    38 [label="compiler_builtins::arm::__aeabi_memset4\nmax = 24\nlocal = 16"]
+    39 [label="compiler_builtins::arm::__aeabi_memclr8\nmax = 24\nlocal = 0"]
+    40 [label="__aeabi_memclr4\nmax = 24\nlocal = 0"]
+    41 [label="__aeabi_memclr8\nmax = 24\nlocal = 0"]
+    42 [label="HardFaultTrampoline\nmax = 0\nlocal = 0"]
+    43 [label="HardFault_\nmax = 0\nlocal = 0"]
+    34 -> 33
+    14 -> 15
+    14 -> 16
+    14 -> 5
+    1 -> 9
+    1 -> 29
+    1 -> 14
+    1 -> 19
+    1 -> 21
+    1 -> 22
+    1 -> 27
+    1 -> 13
+    1 -> 30
+    19 -> 25
+    21 -> 5
+    5 -> 4
+    25 -> 26
+    25 -> 15
+    25 -> 6
+    25 -> 16
+    25 -> 5
+    20 -> 25
+    22 -> 24
+    3 -> 1
+    3 -> 16
+    3 -> 26
+    3 -> 29
+    3 -> 17
+    3 -> 25
+    3 -> 28
+    3 -> 8
+    26 -> 16
+    26 -> 6
+    26 -> 5
+    24 -> 5
+    37 -> 32
+    15 -> 16
+    15 -> 6
+    15 -> 5
+    28 -> 18
+    28 -> 21
+    28 -> 22
+    28 -> 23
+    28 -> 29
+    28 -> 17
+    28 -> 26
+    28 -> 16
+    28 -> 25
+    30 -> 26
+    30 -> 16
+    23 -> 5
+    18 -> 5
+    9 -> 4
+    4 -> 12
+    33 -> 31
+    7 -> 4
+    29 -> 26
+    29 -> 16
+    40 -> 39
+    38 -> 37
+    17 -> 18
+    17 -> 14
+    17 -> 19
+    17 -> 20
+    17 -> 21
+    17 -> 22
+    17 -> 23
+    35 -> 33
+    8 -> 4
+    41 -> 39
+    16 -> 5
+    2 -> 3
+    13 -> 5
+    6 -> 7
+    0 -> 11
+    0 -> 2
+    1 -> 40
+    1 -> 36
+    1 -> 41
+    1 -> 34
+    3 -> 40
+    3 -> 36
+    3 -> 41
+    3 -> 34
+    13 -> 34
+    14 -> 40
+    14 -> 41
+    14 -> 34
+    17 -> 40
+    17 -> 34
+    17 -> 36
+    19 -> 40
+    19 -> 34
+    20 -> 40
+    20 -> 34
+    22 -> 40
+    25 -> 41
+    26 -> 41
+    28 -> 40
+    28 -> 34
+    28 -> 36
+    28 -> 41
+    29 -> 41
+    30 -> 41
+    36 -> 35
+    39 -> 38
+    42 -> 43
+}

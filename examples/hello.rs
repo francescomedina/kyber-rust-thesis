@@ -1,9 +1,11 @@
 #![no_main]
 #![no_std]
 
+use core::mem::size_of_val;
 use panic_halt as _;
 use cortex_m_rt::entry;
-use pqc_kyber::{keypair};
+use cortex_m_semihosting::hprintln;
+use pqc_kyber::{keypair, Keypair, KYBER_PUBLICKEYBYTES, KYBER_SECRETKEYBYTES, PublicKey, SecretKey, UAKE_INIT_BYTES, UakeSendInit};
 use pqc_kyber::Uake;
 use rand_core::{RngCore, CryptoRng, Error,impls};
 
@@ -32,27 +34,32 @@ impl RngCore for CustomRng {
 impl CryptoRng for CustomRng {
 }
 
-// fn custom_client_init(bob_keys: Keypair, rng: &mut CustomRng){
-//     // let mut bob = Uake::new();
-//     // hprintln!("{:?}", size_of_val(&alice)).unwrap();
-//     //
-//     let mut alice = Uake::new();
-//     let client_init = alice.client_init(&bob_keys.public, rng);
-//     hprintln!("{:?}", size_of_val(&client_init));
-// }
+pub struct Bob {
+    s: SecretKey,
+    c: UakeSendInit
+}
+
+fn create_bob(alice: &mut Uake, rng: &mut CustomRng) -> Bob {
+    let bob_keys = keypair(rng);
+    Bob {
+        s: bob_keys.secret,
+        c: alice.client_init(&bob_keys.public, rng)
+    }
+}
 
 #[entry]
 unsafe fn main() -> ! {
     let mut rng = CustomRng(2 as u64);
-    let bob_keys = keypair(&mut rng);
-    // custom_client_init(bob_keys, &mut rng);
     let mut alice = Uake::new();
+    let bob_info = create_bob(&mut alice, &mut rng);
     let mut bob = Uake::new();
-    let client_init = alice.client_init(&bob_keys.public, &mut rng);
     let server_response = bob.server_receive(
-        client_init, &bob_keys.secret, &mut rng
+        bob_info.c, &bob_info.s, &mut rng
     );
     alice.client_confirm(server_response.unwrap()).expect("A");
-    assert_eq!(alice.shared_secret, bob.shared_secret);
+    // assert_eq!(alice.shared_secret, bob.shared_secret, "a: {}, b {}", alice.shared_secret, bob.shared_secret);
+    hprintln!("{:?}", alice.shared_secret);
+    hprintln!("FINE");
+    hprintln!("{:?}", bob.shared_secret);
     loop {}
 }
