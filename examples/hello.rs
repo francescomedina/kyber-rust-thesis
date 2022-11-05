@@ -18,6 +18,9 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 
 use self::alloc::vec;
 use core::alloc::Layout;
+use core::result::Result;
+use core::result::Result::Ok;
+use core::fmt::Write;
 
 use alloc_cortex_m::CortexMHeap;
 use cortex_m::asm;
@@ -28,7 +31,7 @@ extern crate alloc;
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
 
-const HEAP_SIZE: usize = 15000; // in bytes
+const HEAP_SIZE: usize = 24000; // in bytes
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CustomRng(u64);
@@ -55,19 +58,18 @@ impl RngCore for CustomRng {
 impl CryptoRng for CustomRng {
 }
 
-fn client_init(alice: &mut Uake, public_keys: PublicKey, rng: &mut CustomRng){
+fn client_init(alice: &mut Uake, public_keys: PublicKey, rng: &mut CustomRng) -> UakeSendInit {
     hprintln!("{:?}", size_of_val(&alice)); //4
     let client_init = alice.client_init(&public_keys, rng);
     hprintln!("{:?}", size_of_val(&client_init));
+    client_init
 }
 
-fn uake(bob_keys: Keypair, rng: &mut CustomRng){
+fn uake(alice: &mut Uake,bob_keys: Keypair, rng: &mut CustomRng) -> UakeSendInit {
     hprintln!("CIAONE");
     hprintln!("{:?}", size_of_val(&bob_keys)); //3584
     // let mut xs = vec![Uake::new(), Uake::new()];
-    let mut alice = Uake::new();
-
-    client_init(&mut alice, bob_keys.public, rng);
+    client_init(alice, bob_keys.public, rng)
 }
 
 
@@ -91,14 +93,15 @@ unsafe fn main() -> ! {
     // let mut bob = Uake::new();
     // Growable array allocated on the heap
 
-    let bob_keys = vec![keypair(&mut rng)];
+    let bob_keys = keypair(&mut rng);
+    let mut clients = vec![Uake::new(),Uake::new()];
 
-    uake(bob_keys[0], &mut rng);
+    let client_init = uake(&mut clients[0], bob_keys, &mut rng);
 
-    // let server_response = (*get_bob_value()).server_receive(
-    //     client_init, &bob_keys.secret, &mut rng
-    // );
-    // alice.client_confirm(server_response.unwrap()).expect("TODO: panic message");
+    let server_response = clients[1].server_receive(
+        client_init, &bob_keys.secret, &mut rng
+    );
+    clients[0].client_confirm(server_response.unwrap()).expect("TODO: panic message");
     //
     // assert_eq!(alice.shared_secret, bob.shared_secret);
 
@@ -108,8 +111,7 @@ unsafe fn main() -> ! {
 #[exception]
 unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
     if let Ok(mut hstdout) = hio::hstdout() {
-        // writeln!(hstdout, "{:#?}", ef).ok();
-        hprintln!("{:?}", ef);
+        writeln!(hstdout, "{:#?}", ef).ok();
     }
 
     loop {}
