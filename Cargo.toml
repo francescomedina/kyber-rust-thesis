@@ -11,7 +11,7 @@ cortex-m-rt = "0.7.1"
 cortex-m-semihosting = "0.5.0"
 panic-halt = "0.2.0"
 rand_core = {version = "0.6.4",  default-features = false }
-pqc_kyber = {version = "0.3.0", features = ["kyber512", "zero"]}
+pqc_kyber = {version = "0.3.0", features = ["kyber512"]}
 
 # Uncomment for the panic example.
 # panic-itm = "0.4.1"

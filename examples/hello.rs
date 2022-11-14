@@ -1,13 +1,14 @@
 #![no_main]
 #![no_std]
 
-use core::mem::size_of_val;
 use panic_halt as _;
-use cortex_m_rt::entry;
-use cortex_m_semihosting::hprintln;
-use pqc_kyber::{keypair, Keypair, KYBER_PUBLICKEYBYTES, KYBER_SECRETKEYBYTES, PublicKey, SecretKey, UAKE_INIT_BYTES, UakeSendInit};
+use cortex_m_rt::{entry, ExceptionFrame,exception};
+use cortex_m_semihosting::{hio, hprintln};
+use pqc_kyber::{keypair, KYBER_SECRETKEYBYTES, KYBER_SSBYTES, UAKE_INIT_BYTES, UAKE_RESPONSE_BYTES};
 use pqc_kyber::Uake;
 use rand_core::{RngCore, CryptoRng, Error,impls};
+use core::fmt::Write;
+use core::mem::size_of_val;
 
 #[derive(Clone, Debug)]
 pub struct CustomRng(u64);
@@ -34,32 +35,48 @@ impl RngCore for CustomRng {
 impl CryptoRng for CustomRng {
 }
 
-pub struct Bob {
-    s: SecretKey,
-    c: UakeSendInit
-}
+#[link_section = ".ccrambss"]
+static mut ALICE: Uake = Uake {
+    shared_secret: [0u8; KYBER_SSBYTES],
+    send_a: [0u8; UAKE_INIT_BYTES],
+    send_b: [0u8; UAKE_RESPONSE_BYTES],
+    temp_key: [0u8; KYBER_SSBYTES],
+    eska: [0u8; KYBER_SECRETKEYBYTES],
+};
 
-fn create_bob(alice: &mut Uake, rng: &mut CustomRng) -> Bob {
-    let bob_keys = keypair(rng);
-    Bob {
-        s: bob_keys.secret,
-        c: alice.client_init(&bob_keys.public, rng)
-    }
-}
+#[link_section = ".ccrambss"]
+static mut BOB: Uake = Uake {
+    shared_secret: [0u8; KYBER_SSBYTES],
+    send_a: [0u8; UAKE_INIT_BYTES],
+    send_b: [0u8; UAKE_RESPONSE_BYTES],
+    temp_key: [0u8; KYBER_SSBYTES],
+    eska: [0u8; KYBER_SECRETKEYBYTES],
+};
 
 #[entry]
 unsafe fn main() -> ! {
     let mut rng = CustomRng(2 as u64);
-    let mut alice = Uake::new();
-    let bob_info = create_bob(&mut alice, &mut rng);
-    let mut bob = Uake::new();
-    let server_response = bob.server_receive(
-        bob_info.c, &bob_info.s, &mut rng
+    let bob_keys = keypair(&mut rng);
+
+    let client_init = ALICE.client_init(&bob_keys.public, &mut rng);
+    let server_response = BOB.server_receive(
+        client_init, &bob_keys.secret, &mut rng
     );
-    alice.client_confirm(server_response.unwrap()).expect("A");
-    // assert_eq!(alice.shared_secret, bob.shared_secret, "a: {}, b {}", alice.shared_secret, bob.shared_secret);
-    hprintln!("{:?}", alice.shared_secret);
-    hprintln!("FINE");
-    hprintln!("{:?}", bob.shared_secret);
+    hprintln!("1- rng: {:?} bytes", size_of_val(&rng));
+    hprintln!("2- bob_keys (Keypair): {:?} bytes", size_of_val(&bob_keys));
+    hprintln!("3- Alice client_init: {:?} bytes", size_of_val(&client_init));
+    hprintln!("4- Bob server_response: {:?} bytes", size_of_val(&server_response));
+    ALICE.client_confirm(server_response.unwrap());
+    hprintln!("5- Alice Uake: {:?} bytes", size_of_val(&ALICE));
+    hprintln!("6- Bob Uake: {:?} bytes", size_of_val(&BOB));
     loop {}
 }
+
+#[exception]
+unsafe fn HardFault(ef: &ExceptionFrame) -> ! {
+    if let Ok(mut hstdout) = hio::hstdout() {
+        writeln!(hstdout, "{:#?}", ef).ok();
+    }
+    loop {}
+}
+
