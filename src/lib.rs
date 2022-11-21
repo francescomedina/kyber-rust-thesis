@@ -82,7 +82,8 @@ impl Flash {
     pub fn write<T>(&self, offset: usize, data: &T) -> Result<(), u16> {
         let size = core::mem::size_of::<T>();
         let src_ptr = (data as *const T) as *const u16;
-        let dest_ptr = Flash::get_address(self, offset, size) as *mut u16;
+        // let dest_ptr = Flash::get_address(self, offset, size) as *mut u16;
+        let dest_ptr = 0x08038000 as *mut u16;
 
         debug_assert!(size % 4 == 0, "data size not 4-byte aligned");
         debug_assert!(src_ptr as usize % 4 == 0, "data address not 4-byte aligned");
@@ -114,7 +115,7 @@ impl Flash {
 
     pub fn read<T>(&self, offset: usize) -> T {
         let size = core::mem::size_of::<T>();
-        let ptr = Flash::get_address(self, offset, size) as *const u8;
+        let ptr = 0x08038000 as *const u8;
         unsafe { core::ptr::read(ptr as *const _) }
     }
 

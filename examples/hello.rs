@@ -43,23 +43,23 @@ impl RngCore for CustomRng {
 impl CryptoRng for CustomRng {
 }
 
-// #[link_section = ".ccrambss"]
-// static mut ALICE: Uake = Uake {
-//     shared_secret: [0u8; KYBER_SSBYTES],
-//     send_a: [0u8; UAKE_INIT_BYTES],
-//     send_b: [0u8; UAKE_RESPONSE_BYTES],
-//     temp_key: [0u8; KYBER_SSBYTES],
-//     eska: [0u8; KYBER_SECRETKEYBYTES],
-// };
+#[link_section = ".ccrambss"]
+static mut ALICE: Uake = Uake {
+    shared_secret: [2u8; KYBER_SSBYTES],
+    send_a: [0u8; UAKE_INIT_BYTES],
+    send_b: [0u8; UAKE_RESPONSE_BYTES],
+    temp_key: [0u8; KYBER_SSBYTES],
+    eska: [0u8; KYBER_SECRETKEYBYTES],
+};
 //
-// #[link_section = ".ccrambss"]
-// static mut BOB: Uake = Uake {
-//     shared_secret: [0u8; KYBER_SSBYTES],
-//     send_a: [0u8; UAKE_INIT_BYTES],
-//     send_b: [0u8; UAKE_RESPONSE_BYTES],
-//     temp_key: [0u8; KYBER_SSBYTES],
-//     eska: [0u8; KYBER_SECRETKEYBYTES],
-// };
+#[link_section = ".ccrambss"]
+static mut BOB: Uake = Uake {
+    shared_secret: [0u8; KYBER_SSBYTES],
+    send_a: [0u8; UAKE_INIT_BYTES],
+    send_b: [0u8; UAKE_RESPONSE_BYTES],
+    temp_key: [0u8; KYBER_SSBYTES],
+    eska: [0u8; KYBER_SECRETKEYBYTES],
+};
 
 #[entry]
 unsafe fn main() -> ! {
@@ -74,14 +74,18 @@ unsafe fn main() -> ! {
             .sysclk(stm32f3xx_hal::time::rate::Megahertz(72))
             .freeze(&mut f.acr);
 */
-        let mut value: u32;
-        let mut asd: u32;
+        // let mut value: u32;
+        // let mut asd: u32;
         let offset = 0;
 
-        value = 123;
-        flash.write(offset, &value).unwrap();
-        asd = flash.read(offset);
-        flash.erase().unwrap();
+        // value = 123;
+        hprintln!("{:?}", size_of_val(&ALICE));
+        flash.write(offset, &ALICE).unwrap();
+        BOB = flash.read(offset);
+        hprintln!("{:?}", size_of_val(&BOB));
+        hprintln!("{:?}", ALICE.shared_secret);
+        hprintln!("{:?}", BOB.shared_secret);
+        // flash.erase().unwrap();
     }
 
 
