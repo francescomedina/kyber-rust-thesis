@@ -64,7 +64,7 @@ impl CryptoRng for CustomRng {
 #[entry]
 unsafe fn main() -> ! {
     if let (Some(p), Some(_cp)) = (pac::Peripherals::take(), Peripherals::take()) {
-        let flash = Flash::new(p.FLASH, 32);
+        let flash = Flash::new(p.FLASH, 60);
         /*let a = pac::Peripherals::take().unwrap();
         let mut f = a.FLASH.constrain();
         //setup CPU clock to 168MHz
@@ -75,16 +75,13 @@ unsafe fn main() -> ! {
             .freeze(&mut f.acr);
 */
         let mut value: u32;
+        let mut asd: u32;
         let offset = 0;
 
-        value = flash.read(offset);
-
-        hprintln!("{}", value);
-
         value = 123;
-
-        // flash.erase().unwrap();
         flash.write(offset, &value).unwrap();
+        asd = flash.read(offset);
+        flash.erase().unwrap();
     }
 
 

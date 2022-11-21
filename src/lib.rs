@@ -37,7 +37,14 @@ impl Flash {
     pub fn erase(&self) -> Result<(), u16> {
         while self.flash.sr.read().bsy().bit_is_set() {}
 
-        self.flash.cr.modify(|_, w| w.mer().set_bit());
+        self.flash.cr.modify(|_, w| {
+            w.per().set_bit()
+            // unsafe { w.snb().bits(self.sector) }
+        });
+        // self.flash.cr.modify(|_, w| w.strt().set_bit());
+        let target = Flash::get_address(self, 0 as usize, 4 as usize) as u32;
+        self.flash.ar.write(|w| unsafe { w.bits(target) });
+
         self.flash.cr.modify(|_, w| w.strt().set_bit());
 
         while self.flash.sr.read().bsy().bit_is_set() {}
@@ -74,8 +81,8 @@ impl Flash {
 
     pub fn write<T>(&self, offset: usize, data: &T) -> Result<(), u16> {
         let size = core::mem::size_of::<T>();
-        let src_ptr = (data as *const T) as *const u32;
-        let dest_ptr = Flash::get_address(self, offset, size) as *mut u32;
+        let src_ptr = (data as *const T) as *const u16;
+        let dest_ptr = Flash::get_address(self, offset, size) as *mut u16;
 
         debug_assert!(size % 4 == 0, "data size not 4-byte aligned");
         debug_assert!(src_ptr as usize % 4 == 0, "data address not 4-byte aligned");
@@ -83,13 +90,13 @@ impl Flash {
         while self.flash.sr.read().bsy().bit_is_set() {}
 
         //check if register operations can be moved out of the loop
-        for i in 0..size as isize / 4 {
+        for i in 0..size as isize / 2 {
             self.flash.cr.modify(|_, w| w.pg().set_bit());
             unsafe {
-                let asd = *src_ptr.offset(i);
+                // let asd = *src_ptr.offset(i);
                 *dest_ptr.offset(i) = *src_ptr.offset(i);
             }
-            while self.flash.sr.read().bsy().bit_is_clear() {}
+            while self.flash.sr.read().bsy().bit_is_set() {}
 
             let status = self.flash.sr.read();
             if status.wrprterr().bit_is_set()
