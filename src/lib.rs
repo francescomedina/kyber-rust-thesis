@@ -60,6 +60,25 @@ impl Flash {
         Ok(())
     }
 
+    // fn get_address(&self, offset: usize, access_size: usize) -> usize {
+    //     // let (size, address) = match self.sector {
+    //     //     //RM0090 Rev 18 page 75
+    //     //     0..=3 => (0x4000, 0x0800_0000 + self.sector as usize * 0x4000),
+    //     //     4 => (0x1_0000, 0x0801_0000),
+    //     //     5..=11 => (0x2_0000, 0x0802_0000 + (self.sector - 5) as usize * 0x2_0000),
+    //     //     _ => panic!("invalid sector {}", self.sector),
+    //     // };
+    //     let (size, address) = match self.sector {
+    //         //RM0316 Rev 8 page 65
+    //         0..=127 => (0x800, 0x0800_0000 + self.sector as usize * 0x800), //0x800 => 2KB
+    //         _ => panic!("invalid sector {}", self.sector),
+    //     };
+    //
+    //     debug_assert!(offset + access_size < size, "access beyond sector limits");
+    //
+    //     address + offset
+    // }
+
     fn get_address(&self, offset: usize, access_size: usize) -> usize {
         // let (size, address) = match self.sector {
         //     //RM0090 Rev 18 page 75
@@ -68,13 +87,13 @@ impl Flash {
         //     5..=11 => (0x2_0000, 0x0802_0000 + (self.sector - 5) as usize * 0x2_0000),
         //     _ => panic!("invalid sector {}", self.sector),
         // };
-        let (size, address) = match self.sector {
+        let (size, address) = match self.sector { // sector 112 -> start from 0x08038000 and it has 32KB of available FLASH memory
             //RM0316 Rev 8 page 65
             0..=127 => (0x800, 0x0800_0000 + self.sector as usize * 0x800), //0x800 => 2KB
             _ => panic!("invalid sector {}", self.sector),
         };
 
-        debug_assert!(offset + access_size < size, "access beyond sector limits");
+        debug_assert!(offset + access_size < 0x0804_0000, "access beyond sector limits");
 
         address + offset
     }
@@ -83,7 +102,7 @@ impl Flash {
         let size = core::mem::size_of::<T>();
         let src_ptr = (data as *const T) as *const u16;
         // let dest_ptr = Flash::get_address(self, offset, size) as *mut u16;
-        let dest_ptr = 0x08038000 as *mut u16;
+        let dest_ptr = Flash::get_address(self, offset, size) as *mut u16;
 
         debug_assert!(size % 4 == 0, "data size not 4-byte aligned");
         debug_assert!(src_ptr as usize % 4 == 0, "data address not 4-byte aligned");
@@ -115,7 +134,7 @@ impl Flash {
 
     pub fn read<T>(&self, offset: usize) -> T {
         let size = core::mem::size_of::<T>();
-        let ptr = 0x08038000 as *const u8;
+        let ptr = Flash::get_address(self, offset, size) as *const u8;
         unsafe { core::ptr::read(ptr as *const _) }
     }
 
