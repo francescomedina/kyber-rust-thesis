@@ -10,6 +10,14 @@ use rand_core::{RngCore, CryptoRng, Error,impls};
 use core::fmt::Write;
 use core::mem::size_of_val;
 
+
+use cortex_m::peripheral::Peripherals;
+use kyber_rust::Flash;
+use hal::rcc::RccExt;
+use stm32f3xx_hal as hal;
+use stm32f3xx_hal::flash::FlashExt;
+use stm32f3xx_hal::pac;
+
 #[derive(Clone, Debug)]
 pub struct CustomRng(u64);
 
@@ -35,40 +43,65 @@ impl RngCore for CustomRng {
 impl CryptoRng for CustomRng {
 }
 
-#[link_section = ".ccrambss"]
-static mut ALICE: Uake = Uake {
-    shared_secret: [0u8; KYBER_SSBYTES],
-    send_a: [0u8; UAKE_INIT_BYTES],
-    send_b: [0u8; UAKE_RESPONSE_BYTES],
-    temp_key: [0u8; KYBER_SSBYTES],
-    eska: [0u8; KYBER_SECRETKEYBYTES],
-};
-
-#[link_section = ".ccrambss"]
-static mut BOB: Uake = Uake {
-    shared_secret: [0u8; KYBER_SSBYTES],
-    send_a: [0u8; UAKE_INIT_BYTES],
-    send_b: [0u8; UAKE_RESPONSE_BYTES],
-    temp_key: [0u8; KYBER_SSBYTES],
-    eska: [0u8; KYBER_SECRETKEYBYTES],
-};
+// #[link_section = ".ccrambss"]
+// static mut ALICE: Uake = Uake {
+//     shared_secret: [0u8; KYBER_SSBYTES],
+//     send_a: [0u8; UAKE_INIT_BYTES],
+//     send_b: [0u8; UAKE_RESPONSE_BYTES],
+//     temp_key: [0u8; KYBER_SSBYTES],
+//     eska: [0u8; KYBER_SECRETKEYBYTES],
+// };
+//
+// #[link_section = ".ccrambss"]
+// static mut BOB: Uake = Uake {
+//     shared_secret: [0u8; KYBER_SSBYTES],
+//     send_a: [0u8; UAKE_INIT_BYTES],
+//     send_b: [0u8; UAKE_RESPONSE_BYTES],
+//     temp_key: [0u8; KYBER_SSBYTES],
+//     eska: [0u8; KYBER_SECRETKEYBYTES],
+// };
 
 #[entry]
 unsafe fn main() -> ! {
-    let mut rng = CustomRng(2 as u64);
-    let bob_keys = keypair(&mut rng);
+    if let (Some(p), Some(_cp)) = (pac::Peripherals::take(), Peripherals::take()) {
+        let flash = Flash::new(p.FLASH, 32);
+        /*let a = pac::Peripherals::take().unwrap();
+        let mut f = a.FLASH.constrain();
+        //setup CPU clock to 168MHz
+        let mut rcc = a.RCC.constrain();
+        let _clocks = rcc
+            .cfgr
+            .sysclk(stm32f3xx_hal::time::rate::Megahertz(72))
+            .freeze(&mut f.acr);
+*/
+        let mut value: u32;
+        let offset = 0;
 
-    let client_init = ALICE.client_init(&bob_keys.public, &mut rng);
-    let server_response = BOB.server_receive(
-        client_init, &bob_keys.secret, &mut rng
-    );
-    hprintln!("1- rng: {:?} bytes", size_of_val(&rng));
-    hprintln!("2- bob_keys (Keypair): {:?} bytes", size_of_val(&bob_keys));
-    hprintln!("3- Alice client_init: {:?} bytes", size_of_val(&client_init));
-    hprintln!("4- Bob server_response: {:?} bytes", size_of_val(&server_response));
-    ALICE.client_confirm(server_response.unwrap());
-    hprintln!("5- Alice Uake: {:?} bytes", size_of_val(&ALICE));
-    hprintln!("6- Bob Uake: {:?} bytes", size_of_val(&BOB));
+        value = flash.read(offset);
+
+        hprintln!("{}", value);
+
+        value = 123;
+
+        // flash.erase().unwrap();
+        flash.write(offset, &value).unwrap();
+    }
+
+
+    // let mut rng = CustomRng(2 as u64);
+    // let bob_keys = keypair(&mut rng);
+    //
+    // let client_init = ALICE.client_init(&bob_keys.public, &mut rng);
+    // let server_response = BOB.server_receive(
+    //     client_init, &bob_keys.secret, &mut rng
+    // );
+    // hprintln!("1- rng: {:?} bytes", size_of_val(&rng));
+    // hprintln!("2- bob_keys (Keypair): {:?} bytes", size_of_val(&bob_keys));
+    // hprintln!("3- Alice client_init: {:?} bytes", size_of_val(&client_init));
+    // hprintln!("4- Bob server_response: {:?} bytes", size_of_val(&server_response));
+    // ALICE.client_confirm(server_response.unwrap());
+    // hprintln!("5- Alice Uake: {:?} bytes", size_of_val(&ALICE));
+    // hprintln!("6- Bob Uake: {:?} bytes", size_of_val(&BOB));
     loop {}
 }
 
