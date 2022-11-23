@@ -59,36 +59,15 @@ impl Flash {
             }
         }
 
+        self.flash.cr.modify(|_, w| {
+            w.per().clear_bit()
+            // unsafe { w.snb().bits(self.sector) }
+        });
+
         Ok(())
     }
 
-    // fn get_address(&self, offset: usize, access_size: usize) -> usize {
-    //     // let (size, address) = match self.sector {
-    //     //     //RM0090 Rev 18 page 75
-    //     //     0..=3 => (0x4000, 0x0800_0000 + self.sector as usize * 0x4000),
-    //     //     4 => (0x1_0000, 0x0801_0000),
-    //     //     5..=11 => (0x2_0000, 0x0802_0000 + (self.sector - 5) as usize * 0x2_0000),
-    //     //     _ => panic!("invalid sector {}", self.sector),
-    //     // };
-    //     let (size, address) = match self.sector {
-    //         //RM0316 Rev 8 page 65
-    //         0..=127 => (0x800, 0x0800_0000 + self.sector as usize * 0x800), //0x800 => 2KB
-    //         _ => panic!("invalid sector {}", self.sector),
-    //     };
-    //
-    //     debug_assert!(offset + access_size < size, "access beyond sector limits");
-    //
-    //     address + offset
-    // }
-
     fn get_address(&self, offset: usize, access_size: usize) -> usize {
-        // let (size, address) = match self.sector {
-        //     //RM0090 Rev 18 page 75
-        //     0..=3 => (0x4000, 0x0800_0000 + self.sector as usize * 0x4000),
-        //     4 => (0x1_0000, 0x0801_0000),
-        //     5..=11 => (0x2_0000, 0x0802_0000 + (self.sector - 5) as usize * 0x2_0000),
-        //     _ => panic!("invalid sector {}", self.sector),
-        // };
         let (size, address) = match self.sector { // sector 112 -> start from 0x08038000 and it has 32KB of available FLASH memory
             //RM0316 Rev 8 page 65
             0..=127 => (0x800, 0x0800_0000 + self.sector as usize * 0x800), //0x800 => 2KB
@@ -134,10 +113,10 @@ impl Flash {
         Ok(())
     }
 
-    pub fn read<T>(&self, offset: usize) -> &T {
+    pub fn read<T>(&self, offset: usize) -> T {
         let size = core::mem::size_of::<T>();
         let ptr = Flash::get_address(self, offset, size) as *const u8;
-        unsafe { &core::ptr::read(ptr as *const _) }
+        unsafe { core::ptr::read(ptr as *const _) }
     }
 
     pub fn read_into<T>(&self, offset: usize, dest: &mut T) {

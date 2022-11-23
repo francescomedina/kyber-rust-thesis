@@ -47,28 +47,33 @@ static mut ALICE: Uake = Uake {
     eska: [0u8; KYBER_SECRETKEYBYTES],
 };
 
-#[link_section = ".ccrambss"]
-static mut BOB_KEYS: Keypair = Keypair {
-    public: [0u8; KYBER_PUBLICKEYBYTES],
-    secret: [0u8; KYBER_SECRETKEYBYTES]
-};
+// #[link_section = ".ccrambss"]
+// static mut BOB_KEYS: Keypair = Keypair {
+//     public: [0u8; KYBER_PUBLICKEYBYTES],
+//     secret: [0u8; KYBER_SECRETKEYBYTES]
+// };
 
 #[entry]
 unsafe fn main() -> ! {
     let mut rng = CustomRng(2 as u64);
-    BOB_KEYS = keypair(&mut rng);
+    let bob_keys = keypair(&mut rng);
     if let Some(p) = pac::Peripherals::take() {
         let flash = Flash::new(p.FLASH, 112);
         let off1 = 0;
         let off2 = 4032;
-        let client_init = ALICE.client_init(&BOB_KEYS.public, &mut rng);
+        let client_init = ALICE.client_init(&bob_keys.public, &mut rng);
         flash.erase(off1,4032).unwrap();
         flash.write(off1, &ALICE).unwrap();
+        ALICE.shared_secret = [0u8; KYBER_SSBYTES];
+        ALICE.send_a = [0u8; UAKE_INIT_BYTES];
+        ALICE.send_b = [0u8; UAKE_RESPONSE_BYTES];
+        ALICE.temp_key = [0u8; KYBER_SSBYTES];
+        ALICE.eska = [0u8; KYBER_SECRETKEYBYTES];
+        let server_response = ALICE.server_receive(client_init, &bob_keys.secret, &mut rng);
         flash.erase(off2,4032).unwrap();
         flash.write(off2, &ALICE).unwrap();
-        let server_response = flash.read::<Uake>(off1).server_receive(client_init, &BOB_KEYS.secret, &mut rng).unwrap();
-        // ALICE = flash.read::<Uake>(off1);
-        ALICE.client_confirm(server_response).expect("TODO: panic message");
+        ALICE = flash.read::<Uake>(off1);
+        ALICE.client_confirm(server_response.unwrap());
         // hprintln!("5- Alice shared secret: {:?}", ALICE.shared_secret);
         // ALICE = flash.read::<Uake>(off2);
         // hprintln!("6- Bob shared secret: {:?}",  ALICE.shared_secret);
