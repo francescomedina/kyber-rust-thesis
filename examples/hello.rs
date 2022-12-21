@@ -372,7 +372,7 @@ pub fn randombytes<R>(x: &mut [u8], len: usize, rng: &mut R)
 pub fn rand_with_range(a: i16, b: i16, r: &mut[i16]){
     // let mut rng = rand::thread_rng();
     for i in 0..r.len() {
-        let mut small_rng = SmallRng::seed_from_u64(47324547 + (i as u64 * 12));
+        let mut small_rng = SmallRng::seed_from_u64(77324547 + (i as u64 * 12));
         r[i] = small_rng.gen_range(a..(b+1));
     }
 }
@@ -396,7 +396,7 @@ unsafe fn main() -> ! {
         .replace(TickCounter::new(core_periphs.SYST, &clocks))
     });
 
-    let (mut e, mut pkpv, mut skpv) = (Polyvec::new(), Polyvec::new(), Polyvec::new());
+/*    let (mut e, mut pkpv, mut skpv) = (Polyvec::new(), Polyvec::new(), Polyvec::new());
     // let mut ntt_max_clock = 0;
     // let mut ntt_min_clock = u64::MAX;
     // let mut ntt_sum = 0;
@@ -408,19 +408,33 @@ unsafe fn main() -> ! {
     let mut m_sum = 0;
     let mut m_ticks = 0;
     let mut m_millis = 0;
-    let max = 1;
+    let max = 100;
     for j in 0..max {
         rand_with_range(-(KYBER_Q as i16 -1)/2,(KYBER_Q as i16 -1)/2,&mut skpv.vec[0].coeffs);
         // rand_with_range(-3,3,&mut skpv.vec[0].coeffs);
         // ntt(&mut skpv.vec[0].coeffs);
+        // let inst0 = instant();
+        // invntt(&mut skpv.vec[0].coeffs);
+        // let inst1 = instant();
+        // m_ticks = inst1.clock_ticks-inst0.clock_ticks;
+        // m_millis = inst1.milliseconds-inst0.milliseconds;
+        // m_sum += m_ticks;
+        // if m_max_clock < m_ticks {
+        //     // hprintln!("{} {} {} {}", j, skpv.vec[0].coeffs[i], ZETAS[z], m_ticks);
+        //     m_max_clock = m_ticks;
+        // }
+        // if m_min_clock > m_ticks {
+        //     // hprintln!("{} {} {} {}", j, skpv.vec[0].coeffs[i], ZETAS[z], m_ticks);
+        //     m_min_clock = m_ticks;
+        // }
         for i in 0..KYBER_N {
             let mut z = i;
             if i > 127 {
                 z = 255 - i;
             }
-            let input = ZETAS[z] as i32 * skpv.vec[0].coeffs[i] as i32;
+            // let input = skpv.vec[0].coeffs[i] as i32;
             let inst0 = instant();
-            montgomery_reduce(input);
+            barrett_reduce(skpv.vec[0].coeffs[i]);
             let inst1 = instant();
             m_ticks = inst1.clock_ticks-inst0.clock_ticks;
             m_millis = inst1.milliseconds-inst0.milliseconds;
@@ -434,9 +448,8 @@ unsafe fn main() -> ! {
                 m_min_clock = m_ticks;
             }
         }
-        hprintln!("NTT: MILLIS({:?}) MIN({:?}) MAX({:?}) AVG({:?})", m_millis, m_min_clock, m_max_clock, m_sum/256);
-        m_sum = 0;
     }
+    hprintln!("NTT: MILLIS({:?}) MIN({:?}) MAX({:?}) AVG({:?})", m_millis, m_min_clock, m_max_clock, m_sum/(256*max));*/
 
 /*    let mut rng = CustomRng(2 as u64);
     let inst0 = instant();
