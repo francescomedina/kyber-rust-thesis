@@ -159,7 +159,8 @@ struct TickCounter {
 impl TickCounter{
     pub fn new(mut syst: SYST, clocks: &Clocks) -> TickCounter {
         syst.set_clock_source(SystClkSource::Core);
-        let fraction: u32 = 100_000;
+        let fraction: u32 = 100_000; // 8_000_000 / 100_000 => each tick is a nanosecond, after the tick the counter is reloaded
+        //let fraction: u32 = 1_000_000; // 8_000_000 / 100_000 => each tick is a nanosecond
         hprintln!("Clock {:?}", clocks.sysclk().0);
         hprintln!("Launch an interrupt every {:?} ticks", clocks.sysclk().0 / fraction - 1);
 
@@ -220,18 +221,18 @@ fn reset() {
     })
 }
 
-// fn sleepms(ms: u64) {
-//     let deadline = millis() + ms;
-//     while millis() < deadline {
-//         cortex_m::asm::wfi();
-//     }
-// }
+/*fn sleepms(ms: u64) {
+    let deadline = millis() + ms;
+    while millis() < deadline {
+        cortex_m::asm::wfi();
+    }
+}
 
-// #[link_section= ".ccrambss"]
-// static mut KEYPAIR: Keypair = Keypair {
-//     public: [0u8; KYBER_PUBLICKEYBYTES],
-//     secret: [0u8; KYBER_SECRETKEYBYTES]
-// };
+#[link_section= ".ccrambss"]
+static mut KEYPAIR: Keypair = Keypair {
+    public: [0u8; KYBER_PUBLICKEYBYTES],
+    secret: [0u8; KYBER_SECRETKEYBYTES]
+};*/
 
 pub fn poly_cbd_eta1(r: &mut Poly, buf: &[u8])
 {
@@ -565,8 +566,20 @@ unsafe fn main() -> ! {
     hprintln!("Encapsulate: MILLIS({:?}) MIN({:?}) MAX({:?}) AVG({:?})", e_millis, e_min_clock, e_max_clock, e_sum/1000);
     hprintln!("Decapsulate: MILLIS({:?}) MIN({:?}) MAX({:?}) AVG({:?})", d_millis, d_min_clock, d_max_clock, d_sum/1000);
     hprintln!("NTT: MILLIS({:?}) MIN({:?}) MAX({:?}) AVG({:?})", ntt_millis, ntt_min_clock, ntt_max_clock, ntt_sum/1000);*/
-    // hprintln!("Alice {:?}", shared_secret_alice);
-    // hprintln!("Bob {:?}", shared_secret_bob);
+    for i in 1..=10 {
+        let cycles = 8_000_000 * i as u32;
+        hprintln!("Delay of {} secs", i as u32);
+        hprintln!("START");
+        let inst0 = instant();
+        while instant().milliseconds < inst0.milliseconds + 1_000_000 {
+            cortex_m::asm::wfi();
+        }
+        let inst1 = instant();
+        hprintln!("END");
+        let m_ticks = inst1.clock_ticks-inst0.clock_ticks;
+        let m_millis = inst1.milliseconds-inst0.milliseconds;
+        hprintln!("ticks {} \t millis: {}\n\n", m_ticks, m_millis);
+    }
     loop {}
 }
 
