@@ -15,7 +15,7 @@ rand = { version = "0.8.3", features = ["small_rng"], default-features = false }
 pqc_kyber = {version = "0.3.0", features = ["kyber512"]}
 embedded-time = "0.12.1"
 
-stm32f3xx-hal = { version = "0.9.1", default-features = false, features = ["rt", "stm32f303xc"] }
+stm32f4xx-hal = { version = "0.16.0", default-features = false, features = ["rt", "stm32f407"] }
 
 # Uncomment for the panic example.
 # panic-itm = "0.4.1"

@@ -9,6 +9,7 @@ use cortex_m_rt::{entry, exception};
 use cortex_m_semihosting::{hprintln};
 use pqc_kyber::{decapsulate, encapsulate, keypair, Keypair, KYBER_K, KYBER_PUBLICKEYBYTES, KYBER_SECRETKEYBYTES, KYBER_SSBYTES, UAKE_INIT_BYTES, UAKE_RESPONSE_BYTES};
 use pqc_kyber::Uake;
+use pqc_kyber::crypto_kem_keypair;
 use rand_core::{RngCore, CryptoRng, Error,impls};
 use core::mem::size_of_val;
 use cortex_m::peripheral::syst::RegisterBlock;
@@ -24,11 +25,12 @@ use cortex_m::{
 };
 use cortex_m::peripheral::syst;
 use cortex_m::register::primask::read;
-use stm32f3xx_hal::{
+use stm32f4xx_hal::{
     pac,
     prelude::*,
     rcc::Clocks,
 };
+use stm32f4xx_hal::flash::FlashExt;
 
 
 #[derive(Clone, Debug)]
@@ -86,19 +88,19 @@ impl TickCounter{
         syst.set_clock_source(SystClkSource::Core);
         let fraction: u32 = 100_000; // 8_000_000 / 100_000 => each tick is a nanosecond, after the tick the counter is reloaded
         //let fraction: u32 = 1_000_000; // 8_000_000 / 100_000 => each tick is a nanosecond
-        hprintln!("Clock {:?}", clocks.sysclk().0);
-        hprintln!("Launch an interrupt every {:?} ticks", clocks.sysclk().0 / fraction - 1);
+        hprintln!("Clock {:?}", clocks.sysclk().raw());
+        hprintln!("Launch an interrupt every {:?} ticks", clocks.sysclk().raw() / fraction - 1);
 
         // per ms counter
         // syst.set_reload(clocks.sysclk().0 / 1_000 - 1); // To make the timer wrap every N ticks set the reload value to N - 1
-        syst.set_reload(clocks.sysclk().0 / fraction - 1); // To make the timer wrap every N ticks set the reload value to N - 1
+        syst.set_reload(clocks.sysclk().raw() / fraction - 1); // To make the timer wrap every N ticks set the reload value to N - 1
         syst.clear_current();
         syst.enable_counter();
         syst.enable_interrupt();
 
         TickCounter {
             syst,
-            period: clocks.sysclk().0 as u64 / fraction as u64,
+            period: clocks.sysclk().raw() as u64 / fraction as u64,
             clock_ticks: 0
         }
     }
@@ -167,7 +169,7 @@ macro_rules! op_cyccnt_diff {
             compiler_fence(Ordering::Acquire);
             let before = DWT::cycle_count();
             $(
-                let (c, s) = $x.unwrap();
+                $x;
             )*
             let after = DWT::cycle_count();
             compiler_fence(Ordering::Release);
@@ -177,7 +179,7 @@ macro_rules! op_cyccnt_diff {
                 } else {
                     after + (u32::MAX - before)
                 };
-            (c, s, diff)
+            (diff)
         }
     };
 }
@@ -185,7 +187,6 @@ macro_rules! op_cyccnt_diff {
 #[entry]
 unsafe fn main() -> ! {
     let mut dp = pac::Peripherals::take().unwrap();
-    let mut flash = dp.FLASH.constrain();
     let mut rcc = dp.RCC.constrain();
     let clocks = rcc
         .cfgr
@@ -194,7 +195,7 @@ unsafe fn main() -> ! {
         .hclk(24.MHz())
         .pclk1(12.MHz())
         .pclk2(24.MHz())
-        .freeze(&mut flash.acr);
+        .freeze();
 
     //hprintln!("{:?}", rcc.cfgr.calc_pll());
 
@@ -229,12 +230,14 @@ unsafe fn main() -> ! {
     let mut min = u32::MAX;
     let mut max = u32::MIN;
     let mut sum = 0;
-    for i in 0..30 {
+    for i in 0..1000 {
         let mut rng = CustomRng(i as u64);
-        let bob_keys = keypair(&mut rng);
-        let (ciphertext, shared_key, diff) = op_cyccnt_diff!(encapsulate(&bob_keys.public, &mut rng));
-        c[i] = ciphertext;
-        s[i] = shared_key;
+        let mut pk = [0u8; KYBER_PUBLICKEYBYTES];
+        let mut sk = [0u8; KYBER_SECRETKEYBYTES];
+        let bufs = Some(([1u8; 32].as_slice(), [255u8; 32].as_slice()));
+        let diff = op_cyccnt_diff!(crypto_kem_keypair(&mut pk,&mut sk,&mut rng, bufs));
+        // c[i] = ciphertext;
+        // s[i] = shared_key;
         sum += diff;
         if min > diff {
             min = diff;
@@ -243,7 +246,8 @@ unsafe fn main() -> ! {
             max = diff;
         }
     }
-    hprintln!("  C: {} \t S: {}\t MIN: {}\tMAX: {}\tAVG: {}\n", c[1][2], s[2][4], min, max, sum/30);
+    // hprintln!("  C: {} \t S: {}\t MIN: {}\tMAX: {}\tAVG: {}\n", c[1][2], s[2][4], min, max, sum/30);
+    hprintln!("  MIN: {}\tMAX: {}\tAVG: {}\n", min, max, sum/1000);
     loop {}
 }
 
