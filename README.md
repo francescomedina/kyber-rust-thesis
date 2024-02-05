@@ -4,6 +4,19 @@
 
 This project is developed and maintained by the [Cortex-M team][team].
 
+## Remember 
+
+Every time you switch from stable to nightly:
+
+``` console
+rustup default stable
+rustup target add thumbv7em-none-eabi
+```
+
+remove Cargo.lock and wait until it is recreate. After that you can normally launch 
+cargo build --example hello
+
+
 ## Dependencies
 
 To build embedded programs using this template you'll need:
