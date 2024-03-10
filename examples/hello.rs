@@ -3,6 +3,7 @@
 
 use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
+use core::cmp;
 use core::convert::TryInto;
 use panic_halt as _;
 use cortex_m_rt::{entry, exception};
@@ -11,7 +12,7 @@ use pqc_kyber::{decapsulate, encapsulate, keypair, Keypair, KYBER_K, KYBER_PUBLI
 use pqc_kyber::Uake;
 use pqc_kyber::crypto_kem_keypair;
 use rand_core::{RngCore, CryptoRng, Error,impls};
-use core::mem::size_of_val;
+use core::mem::{self, size_of_val};
 use cortex_m::peripheral::syst::RegisterBlock;
 use cortex_m::peripheral::{Peripherals, DWT};
 
@@ -33,43 +34,64 @@ use stm32f4xx_hal::{
 use stm32f4xx_hal::flash::FlashExt;
 
 
-#[derive(Clone, Debug)]
-pub struct CustomRng(u64);
-
-impl RngCore for CustomRng {
-    fn next_u32(&mut self) -> u32 {
-        self.next_u64() as u32
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        self.0 += 1;
-        self.0
-    }
-
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        let mut offset = DWT::cycle_count();
-        for (index, dest) in dest.iter_mut().enumerate() {
-            let mut seed = (DWT::cycle_count() as u64 + offset as u64 + self.0*index as u64);
-            *dest = SmallRng::seed_from_u64(seed).gen_range(0..=255);
-            if index%2 == 0{
-                offset += self.0 as u32 * index as u32;
-            }else{
-                offset -= index as u32;
-                if offset < 0 {
-                    offset = seed as u32;
-                }
-            }
-            offset = offset + seed as u32;
-        }
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
-        Ok(self.fill_bytes(dest))
-    }
+// // #[derive(Clone, Debug)]
+pub struct CustomRng<R: Rng + ?Sized>{
+    rng_value: R
 }
 
-impl CryptoRng for CustomRng {
-}
+// impl<R: RngCore + ?Sized> RngCore for CustomRng<R> {
+//     fn next_u32(&mut self) -> u32 {
+//         self.next_u64() as u32
+//     }
+
+//     fn next_u64(&mut self) -> u64 {
+//         self.
+//     }
+
+//     fn fill_bytes(&mut self, dest: &mut [u8]) {
+//         impls::fill_bytes_via_next(self, dest)
+//     }
+
+//     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
+//         Ok(self.fill_bytes(dest))
+//     }
+// }
+
+// impl<R: RngCore + ?Sized> CryptoRng for CustomRng<R> {
+// }
+
+// impl<R: Rng + ?Sized> RngCore for CustomRng<R> {
+//     fn next_u32(&mut self) -> u32 {
+//         self.rng_value.next_random_word().unwrap()
+//     }
+
+//     fn next_u64(&mut self) -> u64 {
+//         let w1 = self.next_u32();
+//         let w2 = self.next_u32();
+//         (w1 as u64).shl(32) | (w2 as u64)
+//     }
+
+//     fn fill_bytes(&mut self, dest: &mut [u8]) {
+//         self.try_fill_bytes(dest).unwrap()
+//     }
+
+//     /// Fills buffer with random values, or returns an error
+//     fn try_fill_bytes(&mut self, buffer: &mut [u8]) -> Result<(), rand_core::Error> {
+//         const BATCH_SIZE: usize = 4 / mem::size_of::<u8>();
+//         let mut i = 0_usize;
+//         while i < buffer.len() {
+//             let random_word = self.next_random_word()?;
+//             let bytes = random_word.to_ne_bytes();
+//             let n = cmp::min(BATCH_SIZE, buffer.len() - i);
+//             buffer[i..i + n].copy_from_slice(&bytes[..n]);
+//             i += n;
+//         }
+//         Ok(())
+//     }
+// }
+
+// impl<R: Rng + ?Sized> CryptoRng for CustomRng<R> {
+// }
 
 struct Instant {
     clock_ticks: u64,
@@ -186,16 +208,16 @@ macro_rules! op_cyccnt_diff {
 
 #[entry]
 unsafe fn main() -> ! {
-    let mut dp = pac::Peripherals::take().unwrap();
-    let mut rcc = dp.RCC.constrain();
-    let clocks = rcc
-        .cfgr
-        .use_hse(8.MHz())
-        .sysclk(24.MHz())
-        .hclk(24.MHz())
-        .pclk1(12.MHz())
-        .pclk2(24.MHz())
-        .freeze();
+    // let mut dp = pac::Peripherals::take().unwrap();
+    // let mut rcc = dp.RCC.constrain();
+    // let clocks = rcc
+    //     .cfgr
+    //     .use_hse(8.MHz())
+    //     .sysclk(24.MHz())
+    //     .hclk(24.MHz())
+    //     .pclk1(12.MHz())
+    //     .pclk2(24.MHz())
+    //     .freeze();
 
     //hprintln!("{:?}", rcc.cfgr.calc_pll());
 
@@ -230,25 +252,52 @@ unsafe fn main() -> ! {
     let mut min = u32::MAX;
     let mut max = u32::MIN;
     let mut sum = 0;
-    for i in 0..1000 {
-        let mut rng = CustomRng(i as u64);
-        let mut pk = [0u8; KYBER_PUBLICKEYBYTES];
-        let mut sk = [0u8; KYBER_SECRETKEYBYTES];
-        let bufs = Some(([1u8; 32].as_slice(), [255u8; 32].as_slice()));
-        let diff = op_cyccnt_diff!(crypto_kem_keypair(&mut pk,&mut sk,&mut rng, bufs));
-        // c[i] = ciphertext;
-        // s[i] = shared_key;
-        sum += diff;
-        if min > diff {
-            min = diff;
-        }
-        if max < diff {
-            max = diff;
+    
+    let dp = pac::Peripherals::take().unwrap();
+    let rcc = dp.RCC.constrain();
+    let clocks = rcc
+        .cfgr
+        .use_hse(8.MHz()) //discovery board has 8 MHz crystal for HSE
+        .sysclk(8.MHz())
+        .require_pll48clk()
+        .freeze();
+    // let clocks = rcc.cfgr.require_pll48clk().freeze();
+    let mut rng = dp.RNG.constrain(&clocks);
+    // hprintln!("  RNG: {}\n", rng.next_u64());
+    // hprintln!("  RNG: {}\n", rng.next_u64());
+    // hprintln!("  RNG: {}\n", rng.next_u64());
+    let mut number: [u8; 65536] = [0; 65536];
+    loop {
+        match rng.next_random_word() {
+            Ok(_) => (),
+            Err(e) => hprintln!("ERROR RNG {:?}", e)
         }
     }
-    // hprintln!("  C: {} \t S: {}\t MIN: {}\tMAX: {}\tAVG: {}\n", c[1][2], s[2][4], min, max, sum/30);
-    hprintln!("  MIN: {}\tMAX: {}\tAVG: {}\n", min, max, sum/1000);
-    loop {}
+    // for _ in 0..1 {
+    //     // hprintln!("  RNG: {} ", rng);
+    //     let mut pk = [0u8; KYBER_PUBLICKEYBYTES];
+    //     let mut sk = [0u8; KYBER_SECRETKEYBYTES];
+    //     let bufs = Some(([1u8; 32].as_slice(), [255u8; 32].as_slice()));
+    //     match crypto_kem_keypair(&mut pk,&mut sk,&mut rng, bufs) {
+    //         Ok(a) => {
+    //             let diff = op_cyccnt_diff!(a);
+    //             // c[i] = ciphertext;
+    //             // s[i] = shared_key;
+    //             sum += diff;
+    //             if min > diff {
+    //                 min = diff;
+    //             }
+    //             if max < diff {
+    //                 max = diff;
+    //             }
+    //         },
+    //         Err(e) => hprintln!("{}", e),
+    //     }
+    // }
+    // // hprintln!("  C: {} \t S: {}\t MIN: {}\tMAX: {}\tAVG: {}\n", c[1][2], s[2][4], min, max, sum/30);
+    // hprintln!("  MIN: {}\tMAX: {}\tAVG: {}\n", min, max, sum/100);
+    // hprintln!("FINISHED");
+    // loop {}
 }
 
 #[exception]
