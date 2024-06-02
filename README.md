@@ -1,8 +1,8 @@
-# `cortex-m-quickstart`
+# `Speed Evaluation`
 
-> A template for building applications for ARM Cortex-M microcontrollers
-
-This project is developed and maintained by the [Cortex-M team][team].
+We use two kind of clock cycles measurements:
+- SysTick
+- DWT register
 
 ## Remember 
 
