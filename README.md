@@ -4,6 +4,21 @@ We use two kind of clock cycles measurements:
 - SysTick
 - DWT register
 
+# `Compilation Analysis Procedure`
+
+## ASM FROM C
+
+- /usr/bin/cc [or arm-none-eabi-gcc] -Wall -Wextra -Wpedantic -Wmissing-prototypes -Wredundant-decls -Wshadow -Wpointer-arith -O3 -fno-strict-aliasing -fomit-frame-pointer -DKYBER_K=4 -c kex.c kem.c indcpa.c polyvec.c poly.c ntt.c cbd.c reduce.c verify.c fips202.c symmetric-shake.c params.h kex.h kem.h indcpa.h polyvec.h poly.h ntt.h cbd.h reduce.c verify.h symmetric.h fips202.h -ffunction-sections
+- ld [or arm-none-eabi-ld] -r cbd.o fips202.o indcpa.o kem.o kex.o ntt.o poly.o polyvec.o reduce.o symmetric-shake.o verify.o -o final.o
+- nm -f sysv final.o
+- objdump [or arm-none-eabi-objdump] -w -dr --no-recursion-limit --section=.text.pqcrystals_kyber1024_ref_ntt final.o > no_aliasing_arm_final__ntt_c_kyber1024.S
+
+## ASM FROM RUST
+
+- cargo asm --example compilation_analysis_ntt --all-crates --no-color > sections.txt
+- cargo asm --example compilation_analysis_ntt [OPTION] --all-crates --no-color > ntt_to_lib.S
+
+
 ## Remember 
 
 Every time you switch from stable to nightly:
