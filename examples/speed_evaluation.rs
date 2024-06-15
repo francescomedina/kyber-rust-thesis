@@ -4,8 +4,9 @@
 use panic_halt as _;
 use cortex_m_rt::{entry, exception};
 use cortex_m_semihosting::{hprint, hprintln};
-use pqc_kyber::{crypto_kem_dec, crypto_kem_enc, crypto_kem_keypair, KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES, KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
+// use pqc_kyber::{crypto_kem_dec, crypto_kem_enc, crypto_kem_keypair, KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES, KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
 
+use pqc_kyber::{crypto_kem_dec, crypto_kem_enc, crypto_kem_keypair, Poly, KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES, KYBER_Q, KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
 use core::cell::RefCell;
 
 // use cortex_m::{
@@ -104,6 +105,9 @@ fn reset() {
         }
     })
 }
+
+// #[entry]
+
 
 #[entry]
 unsafe fn main() -> ! {
