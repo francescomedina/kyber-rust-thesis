@@ -4,7 +4,7 @@ final.o:     file format elf64-x86-64
 
 Disassembly of section .text.pqcrystals_kyber1024_ref_ntt:
 
-0000000000000000 <pqcrystals_kyber1024_ref_ntt>:
+0000000000000000              <pqcrystals_kyber1024_ref_ntt>:
    0:	f3 0f 1e fa          	endbr64 
    4:	41 57                	push   r15
    6:	48 8d 47 02          	lea    rax,[rdi+0x2]

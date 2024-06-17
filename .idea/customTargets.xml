@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="CLionExternalBuildManager">
-    <target id="4ed8c91c-9ea9-4274-9489-6bfe7ecef649" name="toolchain arm" defaultType="TOOL">
-      <configuration id="254009c0-3d66-47f5-9d57-588381bfb86d" name="toolchain arm" toolchainName="Default" />
-    </target>
-  </component>
-</project>
